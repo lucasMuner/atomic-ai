@@ -1,8 +1,10 @@
-@"
 node_modules/
 __pycache__/
 *.pyc
 .env
 dist/
 gh.zip
-"@ | Out-File -Encoding utf8 .gitignore
+
+# Node/Python portáteis baixados manualmente pro deploy "do zero" (SENAI) —
+# são zips grandes, não fazem sentido versionados. Veja HELP.txt.
+tools/

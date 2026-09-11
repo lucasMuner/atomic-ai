@@ -1,22 +1,82 @@
-## Executar script
-.\activate-node.ps1
+=======================================================================
+ DEPLOY EM COMPUTADOR "DO ZERO" (sem Node/Python instalado, ex.: SENAI)
+=======================================================================
 
-## Criar projeto com node
+ANTES DE IR PRO LABORATÓRIO (fazer no seu PC, com internet):
+  - Baixe node-v24.21.0-win-x64.zip     em https://nodejs.org/en/download
+  - Baixe python-3.13.15-embed-amd64.zip em https://www.python.org/downloads/windows/
+    (procure "Windows embeddable package (64-bit)")
+  - Leve os dois zips + esta pasta do projeto num pen drive.
+  - Se o laboratório costuma bloquear internet, teste esses passos com o
+    Wi-Fi desligado no seu PC antes, pra já saber se vai precisar rodar
+    "npm install" / "pip install" ainda em casa e levar as pastas prontas
+    (node_modules, e o Python com os pacotes já instalados) no pen drive.
+
+NO COMPUTADOR DO LABORATÓRIO:
+
+1) Copie a pasta do projeto (atomic-ai-main) pra alguma pasta local,
+   tipo C:\atomic-ai-main (evita rodar direto do pen drive, é mais lento
+   e às vezes dá erro de permissão).
+
+2) Dentro do projeto, crie a pasta "tools" e extraia os dois zips nela:
+     atomic-ai-main\tools\node-v24.21.0-win-x64\node.exe
+     atomic-ai-main\tools\python-3.13.15-embed-amd64\python.exe
+   (se o zip criar uma pasta duplicada dentro, tipo
+    tools\node-v24.21.0-win-x64\node-v24.21.0-win-x64\, suba um nível)
+
+3) Abra o PowerShell NESSA pasta do projeto e rode, uma vez só:
+     .\setup.ps1
+   Se der erro de "não é possível carregar o arquivo ... políticas de
+   execução", rode antes (não precisa ser admin):
+     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   Se isso também for bloqueado (política de domínio do laboratório),
+   veja os comandos manuais equivalentes nos comentários do setup.ps1.
+
+4) Preencha backend\.env com os dados do seu recurso Azure OpenAI
+   (endpoint, chave e nome do deployment — vem tudo explicado dentro
+   do próprio .env.example).
+
+5) Todo dia, ao abrir um PowerShell novo pra trabalhar no projeto:
+     .\activate-env.ps1
+
+6) Rodar o backend (num terminal):
+     cd backend
+     uvicorn main:app --reload --port 8000
+
+7) Rodar o frontend (em outro terminal, com o backend já rodando):
+     cd frontend
+     npm run dev
+   Abra o endereço que aparecer (geralmente http://localhost:5173).
+
+-----------------------------------------------------------------------
+ Referência rápida (se já tiver tudo configurado e só quiser lembrar
+ os comandos, sem o contexto do "do zero"):
+-----------------------------------------------------------------------
+
+## ativar node + python portáteis
+.\activate-env.ps1
+
+## criar projeto com node (só na primeira vez, do zero)
 npm create vite@latest frontend -- --template react-ts
-
-## Ir pasta raiz front
 cd frontend
-
-## Instalar Tailwind
 npm install tailwindcss @tailwindcss/vite
 
-## configurar vite
-vite.config.ts
-
 ## backend
+cd backend
 pip install -r requirements.txt
 copy .env.example .env
 uvicorn main:app --reload --port 8000
 
 ## frontend
-npm run build
+cd frontend
+npm run dev      # ambiente de desenvolvimento
+npm run build    # gera build de produção em frontend\dist
+
+-----------------------------------------------------------------------
+ Atenção ao CORS se mudar a porta do frontend
+-----------------------------------------------------------------------
+O backend (backend\main.py) só libera requisições vindas de
+http://localhost:5173. Se você rodar "npm run preview" (build de
+produção, porta 4173 por padrão) ou qualquer outra porta, adicione
+esse endereço na lista "allow_origins" do CORSMiddleware, ou o
+navegador vai bloquear a chamada pro /api/chat.
