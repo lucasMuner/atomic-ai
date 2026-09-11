@@ -1,0 +1,8 @@
+@"
+node_modules/
+__pycache__/
+*.pyc
+.env
+dist/
+gh.zip
+"@ | Out-File -Encoding utf8 .gitignore

@@ -1,0 +1,14 @@
+## Executar script
+.\activate-node.ps1
+
+## Criar projeto com node
+npm create vite@latest frontend -- --template react-ts
+
+## Ir pasta raiz front
+cd frontend
+
+## Instalar Tailwind
+npm install tailwindcss @tailwindcss/vite
+
+## configurar vite
+vite.config.ts
