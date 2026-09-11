@@ -109,6 +109,34 @@ export default function App() {
     setPhase("idle");
   };
 
+  const handleRenameConversation = (id: string, title: string) => {
+    setConversations((current) => current.map((c) => (c.id === id ? { ...c, title } : c)));
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    if (busy && id === activeId) return; // não apaga a conversa que está respondendo agora
+
+    setConversations((current) => {
+      const remaining = current.filter((c) => c.id !== id);
+
+      if (id === activeId) {
+        // apagou a conversa ativa: vai pra próxima da lista, ou cria uma nova se não sobrou nenhuma
+        if (remaining.length > 0) {
+          setActiveId(remaining[0].id);
+        } else {
+          const conv = makeConversation();
+          setActiveId(conv.id);
+          return [conv];
+        }
+        setLiveTokens([]);
+        setErrorText("");
+        setPhase("idle");
+      }
+
+      return remaining;
+    });
+  };
+
   const handleSend = async (text: string) => {
     if (busy || !active) return;
 
@@ -179,6 +207,8 @@ export default function App() {
         activeId={activeId}
         onSelect={handleSelectConversation}
         onNew={handleNewConversation}
+        onRename={handleRenameConversation}
+        onDelete={handleDeleteConversation}
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
       />
