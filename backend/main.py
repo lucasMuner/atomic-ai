@@ -5,30 +5,25 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from openai import AzureOpenAI
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 load_dotenv()
 
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
-# ATENÇÃO: isso é o nome do DEPLOYMENT que você deu no Azure AI Foundry /
-# Azure OpenAI Studio (ex.: "meu-gpt4o-mini"), não o nome do modelo em si
-# (ex.: "gpt-4o-mini"). É o valor que a API do Azure espera em `model=`.
-AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+AZURE_FOUNDRY_ENDPOINT = os.getenv("AZURE_FOUNDRY_ENDPOINT")
+AZURE_FOUNDRY_API_KEY = os.getenv("AZURE_FOUNDRY_API_KEY")
+AZURE_FOUNDRY_MODEL = os.getenv("AZURE_FOUNDRY_MODEL")
 
-_configured = all([AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT])
+_configured = all([AZURE_FOUNDRY_ENDPOINT, AZURE_FOUNDRY_API_KEY, AZURE_FOUNDRY_MODEL])
 if not _configured:
     print(
-        "[aviso] Configure AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY e "
-        "AZURE_OPENAI_DEPLOYMENT no arquivo .env (veja .env.example)."
+        "[aviso] Configure AZURE_FOUNDRY_ENDPOINT, AZURE_FOUNDRY_API_KEY e "
+        "AZURE_FOUNDRY_MODEL no arquivo .env (veja .env.example)."
     )
 
-client = AzureOpenAI(
-    azure_endpoint=AZURE_OPENAI_ENDPOINT or "",
-    api_key=AZURE_OPENAI_API_KEY or "",
-    api_version=AZURE_OPENAI_API_VERSION,
+client = AsyncOpenAI(
+    base_url=AZURE_FOUNDRY_ENDPOINT or "",
+    api_key=AZURE_FOUNDRY_API_KEY or "",
 )
 
 app = FastAPI()
@@ -60,12 +55,12 @@ def health():
 
 
 @app.post("/api/chat")
-def chat(payload: ChatRequest):
+async def chat(payload: ChatRequest):
     if not _configured:
         raise HTTPException(
             status_code=500,
             detail=(
-                "Backend sem as variáveis do Azure OpenAI configuradas. "
+                "Backend sem as variáveis do Azure Foundry configuradas. "
                 "Confere o arquivo .env."
             ),
         )
@@ -74,22 +69,16 @@ def chat(payload: ChatRequest):
     messages += [{"role": m.role, "content": m.content} for m in payload.history]
     messages.append({"role": "user", "content": payload.message})
 
-    def token_stream():
+    async def token_stream():
         try:
-            response = client.chat.completions.create(
-                model=AZURE_OPENAI_DEPLOYMENT,
-                messages=messages,
-                stream=True,
-            )
-            for chunk in response:
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta
-                if delta and delta.content:
-                    yield delta.content
+            async with client.responses.stream(
+                model=AZURE_FOUNDRY_MODEL,
+                input=messages,
+            ) as stream:
+                async for event in stream:
+                    if event.type == "response.output_text.delta":
+                        yield event.delta
         except Exception as exc:
-            # manda o erro como texto pro front conseguir mostrar algo em vez
-            # de travar no meio do stream sem explicação
-            yield f"\n\n[erro ao chamar o Azure OpenAI: {exc}]"
+            yield f"\n\n[erro ao chamar o Azure Foundry: {exc}]"
 
     return StreamingResponse(token_stream(), media_type="text/plain")

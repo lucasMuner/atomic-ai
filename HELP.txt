@@ -65,7 +65,7 @@ npm install tailwindcss @tailwindcss/vite
 cd backend
 pip install -r requirements.txt
 copy .env.example .env
-uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 
 ## frontend
 cd frontend
